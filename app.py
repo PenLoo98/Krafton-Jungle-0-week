@@ -188,7 +188,12 @@ def like_movie():
     else:
         return jsonify({'result': 'failure'})
 
+# # API 구글 시트의 정보를 가져옵니다.
+# @app.route('/api/sheet', methods=['GET'])
+# def get_sheet():
+
+
 
 if __name__ == '__main__':
     print(sys.executable)
-    app.run('0.0.0.0', port=5000, debug=True)
+    app.run('0.0.0.0', port=5001, debug=True)

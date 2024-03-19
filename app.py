@@ -1,15 +1,24 @@
+from flask import Flask, render_template
+from flask.json.provider import JSONProvider
+
 from bson import ObjectId
 from pymongo import MongoClient
 import pymongo
-
-from flask import Flask, render_template, jsonify, request
-from flask.json.provider import JSONProvider
 
 import json
 import sys
 
 
 app = Flask(__name__)
+
+#secret.json을 읽어 jwt 발급을 위한 시크릿 키 획득.
+#시크릿 키는 보안상 secret.json 파일에 따로 보관하며 gitignore에 등록하여 퍼블릭 업로드 되지 않도록 관리한다.
+with open("secret.json","r") as f:
+    jsondata = json.load(f)
+    
+app.config['SECRET_KEY'] = jsondata["secret-key"]
+
+
 
 client = MongoClient('localhost', 27017)
 db = client.dbjungle
@@ -51,6 +60,9 @@ app.json = CustomJSONProvider(app)
 
 # API #1: HTML 틀(template) 전달
 #         틀 안에 데이터를 채워 넣어야 하는데 이는 아래 이어지는 /api/list 를 통해 이루어집니다.
+
+def 
+
 @app.route('/')
 def home():
     return render_template('index.html')

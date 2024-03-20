@@ -1,4 +1,4 @@
-from flask import Flask, render_template, jsonify, request, redirect, make_response
+from flask import Flask, render_template, jsonify, request, redirect, make_response, url_for
 import jwt
 from pymongo import MongoClient
 import datetime
@@ -32,9 +32,17 @@ db = client.buttLvUp
 @app.route('/')
 def home():
     jwt_token = request.cookies.get('Authorization')
+    #토큰 없는 경우 로그인 페이지로
     if not jwt_token:
         print("토큰없음")
+        # payload_guest = {'user_id' : 'guest', 'exp': datetime.datetime.now()}
+        # guest_token = jwt.encode(payload_guest, app.config['SECRET_KEY'], algorithm='HS256')
+        # goto_login = make_response(render_template('login.html'))
+        # goto_login.set_cookie("Authorization", guest_token)
+        # return goto_login
         return render_template('login.html')
+    
+    #토큰 있으면 디코딩하여 user_id, 만료기간 확인
     decoded_token = jwt.decode(jwt_token, app.config['SECRET_KEY'], algorithms=['HS256'])
     user_id = decoded_token.get('user_id')
     exptime = decoded_token.get('exp')
@@ -42,41 +50,46 @@ def home():
     print(exptime)
     print(datetime.datetime.now())
     print(user_id)
+
+    #토큰이 유효기간내인지 확인해서 만료면 로그인 페이지로
     if datetime.datetime.now() > exptime:
         print("기간만료")
         return render_template('login.html')
+    
+    #user_id를 유저풀의 ID와 대조하여 이름 등 정보 획득, 메인으로 보낸다
     current_user = db.users.find_one({'ID' : user_id})
-#    if current_user == None:
- #       return render_template('main.html', name = name)
+    if current_user == None:
+        print("id 없음")
+        return render_template('login.html')
+    
     name = current_user["Name"]
     return render_template('main.html', name = name)
     
-"""
-@app.route('/login', methods = ['GET'])
-def loginpage():
-    return render_template('login.html')
-"""
+
 @app.route('/login', methods = ['POST'])
 def login():
-    #클라이언트로 받은 json 내용 중 id와 password 추출
+    #클라이언트로 받은 json 내용 중 user_id와 user_password 추출
     user_id = request.get_json()['user_id']
     user_password = request.get_json()['user_password']
     print(user_id + user_password)
 
-    #클라이언트 db의 유저 목록에서 Client_id 조회
-    users = db.users
+    #클라이언트 db의 유저 목록에서 user_id 조회
     user = db.users.find_one({'ID': user_id})
     print(user['Password'])
     if user == None:
         return jsonify({'result': 'failure'})
     if user['ID'] == user_id and user['Password'] == user_password:
-        payload = {'user_id' : user_id, 'exp': datetime.datetime.now() + datetime.timedelta(minutes=30)}
+        payload = {'user_id' : user_id, 'exp': datetime.datetime.now() + datetime.timedelta(minutes=30) - datetime.timedelta(hours=9)}
         access_token = jwt.encode(payload, app.config['SECRET_KEY'], algorithm='HS256')
-        return jsonify({'result': 'success', 'access_token': access_token })
-    else:
-        return jsonify({'result': 'failure'})
+        print(access_token)
+        response = jsonify({'result': 'success', 'access_token': access_token})
+        print(response)
+        return {'result': 'success', 'access_token': access_token}
+    
+    return jsonify({'result': 'failure'})
+    
 
-@app.route("/signup", methods = ['GET'])
+@app.route("/signup")
 def signup():
     return render_template('signup.html')
 

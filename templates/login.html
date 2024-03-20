@@ -1,72 +1,188 @@
 <!DOCTYPE html>
 <html lang="ko">
-  <head>
-    <meta charset="UTF-8" />
-    <meta title="viewport" content="width=device-width, initial-scale=1.0" />
+<head>
+    <meta charset="UTF-8"/>
+    <meta title="viewport" content="width=device-width, initial-scale=1.0"/>
     <title>엉덩이키우기-로그인</title>
     <!-- jQuery 를 포함합니다. -->
     <script
-      src="https://code.jquery.com/jquery-3.7.1.js"
-      integrity="sha256-eKhayi8LEQwp4NKxN+CfCh+3qOVUtJn3QNZ0TciWLP4="
-      crossorigin="anonymous"
+            src="https://code.jquery.com/jquery-3.7.1.js"
+            integrity="sha256-eKhayi8LEQwp4NKxN+CfCh+3qOVUtJn3QNZ0TciWLP4="
+            crossorigin="anonymous"
     ></script>
 
     <!-- CSS library 인 Bulma 를 포함합니다. -->
     <link
-      rel="stylesheet"
-      href="https://cdn.jsdelivr.net/npm/bulma@0.8.0/css/bulma.min.css"
+            rel="stylesheet"
+            href="https://cdn.jsdelivr.net/npm/bulma@0.8.0/css/bulma.min.css"
     />
 
     <!-- Bootstrap 을 포함합니다. -->
     <link
-      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css"
-      rel="stylesheet"
+            href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css"
+            rel="stylesheet"
     />
     <link
-      href="https://getbootstrap.com/docs/5.3/assets/css/docs.css"
-      rel="stylesheet"
+            href="https://getbootstrap.com/docs/5.3/assets/css/docs.css"
+            rel="stylesheet"
     />
     <!-- 텍스트형태로 되어있는 icon 을 쓸 수 있도록 Font awesome 을 포함하빈다. -->
     <script
-      defer
-      src="https://use.fontawesome.com/releases/v6.4.0/js/all.js"
+            defer
+            src="https://use.fontawesome.com/releases/v6.4.0/js/all.js"
     ></script>
 
-    
+    <script>
+        $(document).ready(function() {
+            $("#user_return").click(function(e) {
+                e.preventDefault(); // 폼 제출 기본 동작 방지
+        
+                // 사용자 입력 값 가져오기
+                var userId = $("#user_id").val();
+                var userPassword = $("#user_password").val();
+        
+                // AJAX 요청 설정
+                $.ajax({
+                    url: "/login", // 요청을 보낼 서버의 URL
+                    type: "POST", // 데이터 전송 방식
+                    contentType: "application/json", // 보내는 데이터 타입
+                    data: JSON.stringify({ 
+                        user_id: userId, 
+                        user_password: userPassword 
+                    }), // 서버로 보낼 데이터
+                    success: function(response) {
+                        // 로그인 성공 시, 예를 들어 메인 페이지로 리디렉션
+                        window.location.href = "/main"; // 성공 응답 처리
+                    },
+                    error: function(xhr, status, error) {
+                        // 로그인 실패 시 오류 처리, 예를 들어 오류 메시지 표시
+                        alert("Login failed: " + error);
+                    }
+                });
+            });
+        });
+    </script>
+        
 
-<!-- 이 HTML 안에서 사용할 CSS 를 정의합니다. -->
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
-    
-<!-- 이 HTML 안에서 사용할 javascript 를 정의합니다. -->
+
+    <!-- 이 HTML 안에서 사용할 CSS 를 정의합니다. -->
+    <style>
+        html, body {
+            height: 100%;
+            margin: 0;
+        }
+        
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background-image: url('./static/1.jpeg');
+            background-repeat: no-repeat;
+            background-size: cover;
+            background-position: center;
+        }
+        
+        
+        .login-container {
+            max-width: 300px;
+            padding: 40px;
+            background-color: rgba(255, 255, 255, 0.2);
+            border-radius: 15px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            backdrop-filter: blur(8px); /* 배경 흐림 효과 추가 */
+        }
+        
+        .login-container input:focus {
+    border: 0.2px solid #ccc; /* 원하는 색상으로 변경 */
+    outline: none; /* 기본 브라우저 포커스 스타일 제거 */}
+
+
+        .login-container h1 {
+            text-align: center;
+            margin-bottom: 30px;
+            color: #fff;
+        }
+
+        .login-container input {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 15px;
+            border: 0.2px solid #ccc;
+            border-radius: 10px;
+            background-color: rgba(255, 255, 255, 0.1);
+            color: #fff; /* 텍스트 색상을 흰색으로 변경 */
+        }
+
+        .login-container button {
+            width: 100%;
+            padding: 10px;
+            background-color: #fff; /* 버튼의 배경색을 설정 (이미 파란색으로 설정되어 있을 수 있음) */
+            color: #414145; /* 버튼 내 텍스트 색상을 흰색으로 변경 */
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+        }
+        .login-container input::placeholder {
+            color: #fff; /* 흰색으로 변경 */
+            opacity: 1; /* 흰색이 잘 보이도록 투명도 조정 (브라우저에 따라 필요할 수 있음) */
+        }
+
+        .login-container .signup-link {
+            text-align: center;
+            margin-top: 20px;
+        }
+
+        .login-container .signup-link a {
+            color: #fff;
+        }
+
+        .signup-link, .signup-link a {
+            color: #fff; /* 텍스트와 링크 색상을 흰색으로 변경 */
+        }
+
+        .signup-link a:hover {
+            color: #ddd; /* 호버 시 색상 변경 */
+        }
+
+        .btn-primary {
+            background-color: #fff !important; /* 원하는 배경색 */
+            border-color: #fff !important; /* 원하는 테두리 색상 */
+        }
+        
+        .btn-primary:active, .btn-primary.active,
+        .btn-primary:focus, .btn-primary.focus,
+        .btn-primary:hover {
+            background-color: #0DAE0D !important; /* 클릭 시에도 유지되는 배경색 */
+            border-color: #fff !important; /* 클릭 시에도 유지되는 테두리 색상 */
+        }
+
+        
+    </style>
+
+    <!-- 이 HTML 안에서 사용할 javascript 를 정의합니다. -->
     <script src="{{ url_for('static', filename='script.js') }}"></script>
 
-   </head>
+</head>
 
 
-  <!-- HTML 본문에 해당합니다. -->
-  <!-- HTML 태그를 이용해서 layout 을 대략적으로 잡아두고, -->
-  <!-- 위에 정의된 JavaScript 를 통해 동적으로 데이터를 조작해 최종 HTML 이 만들어집니다. -->
-  <body>
-    <!-- 제목 부분 -->
-    <section class="title"> 
-        <div class="container center">
-          <h1 class="title">로그인</h1>
-        </div>
-    </section>
-    <section>
-      <div>
-              <label for="user_id">id</label>
-              <input type="text" name="user_id" id="user_id">
-              <label for="user_password">password</label>
-              <input type="password" name="user_password" id="user_password">
-              <button id="user_return" type="submit" class="btn btn-primary" onclick="login()">Sign in</button>
-      </div>
-      <div>
-        <a href="/signup">
-        <button id="signup" class="btn btn-primary">회원가입</button>
-        </a>
-      </div>
-  </section>
+<!-- HTML 본문에 해당합니다. -->
+<!-- HTML 태그를 이용해서 layout 을 대략적으로 잡아두고, -->
+<!-- 위에 정의된 JavaScript 를 통해 동적으로 데이터를 조작해 최종 HTML 이 만들어집니다. -->
+<body>
+<div class="login-container">
+    <h1>Login</h1>
+    <div>
+        <input type="text" name="user_id" id="user_id" placeholder="Username">
+        <input type="password" name="user_password" id="user_password" placeholder="Password">
+        <div class="form-check"></div>
+        <button id="user_return" type="submit" class="btn btn-primary" onclick="login()">Login</button>
+    </div>
+    <div class="signup-link">
+        Don't have an account? <a href="/signup">Register</a>
+    </div>
+</div>
 
-  </body>
+</body>
 </html>

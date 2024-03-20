@@ -6,6 +6,7 @@ import json
 import sys
 
 
+
 app = Flask(__name__)
 
 #secret.json을 읽어 jwt 발급을 위한 시크릿 키 획득.
@@ -43,7 +44,11 @@ def home():
         return render_template('login.html')
     
     #토큰 있으면 디코딩하여 user_id, 만료기간 확인
-    decoded_token = jwt.decode(jwt_token, app.config['SECRET_KEY'], algorithms=['HS256'])
+    try:
+        decoded_token = jwt.decode(jwt_token, app.config['SECRET_KEY'], algorithms=['HS256'])
+    except:
+        print("토큰만료")
+        return render_template('login.html')
     user_id = decoded_token.get('user_id')
     exptime = decoded_token.get('exp')
     exptime = datetime.datetime.fromtimestamp(exptime)
@@ -79,7 +84,7 @@ def login():
     if user == None:
         return jsonify({'result': 'failure'})
     if user['ID'] == user_id and user['Password'] == user_password:
-        payload = {'user_id' : user_id, 'exp': datetime.datetime.now() + datetime.timedelta(minutes=30) - datetime.timedelta(hours=9)}
+        payload = {'user_id' : user_id, 'exp': datetime.datetime.now() + datetime.timedelta(minutes=1) - datetime.timedelta(hours=9)}
         access_token = jwt.encode(payload, app.config['SECRET_KEY'], algorithm='HS256')
         print(access_token)
         response = jsonify({'result': 'success', 'access_token': access_token})
@@ -89,9 +94,36 @@ def login():
     return jsonify({'result': 'failure'})
     
 
-@app.route("/signup")
-def signup():
-    return render_template('signup.html')
+@app.route("/signup", methods=['GET'])
+def signup_page():
+    return render_template("signup.html")
+
+@app.route("/signup", methods=['POST'])
+def handle_signup():
+    # 클라이언트로부터 받은 데이터를 JSON 형태로 추출
+    data = request.get_json()
+    full_name = data.get('full_name')
+    user_id = data.get('user_id')
+    user_password = data.get('user_password')
+
+    # 유저 정보 유효성 검사 및 DB에 저장하는 로직 구현 (예시 코드)
+    # 예를 들어, user_id가 이미 존재하는지 확인
+    if db.users.find_one({'ID': user_id}):
+        # 이미 존재하는 user_id인 경우
+        return jsonify({'result': 'failure', 'message': 'User ID already exists'}), 400
+
+    # 비밀번호 해싱 등 보안 처리 구현 필요
+    hashed_password = user_password  # hash_password는 가상의 비밀번호 해싱 함수
+
+    # 새 사용자 정보 MongoDB에 저장
+    db.users.insert_one({
+        'ID': user_id,
+        'Name': full_name,
+        'Password': hashed_password
+    })
+
+    # 회원가입 성공 응답 반환
+    return jsonify({'result': 'success', 'message': 'User registered successfully'}), 200
 
 
 

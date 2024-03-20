@@ -1,6 +1,7 @@
 import gspread
 import json
 import time
+from itertools import chain
 
 # json인증서, 스프레드시트 url, 파일 경로를 읽기
 private_json = json.load(open('privateData_local.json', 'r'))
@@ -57,11 +58,12 @@ def merge_json(file_path, sheet_titles):
         with open(file_path + title + ".json", 'r', encoding='utf-8') as file:
             jsonData = json.load(file)
             json_list.append(jsonData)
+    json_list = list(chain.from_iterable(json_list))
 
     # JSON 파일로 저장
     with open(file_path + "Study Time.json", 'w', encoding='utf-8') as file:
         json.dump(json_list, file, ensure_ascii=False, indent=4)
     print("통합 JSON 저장 완료")
-    return json_list    
+    return json_list
 
 merge_json(save_JSON_path, sheet_titles)

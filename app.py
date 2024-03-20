@@ -1,47 +1,24 @@
-from bson import ObjectId
+from flask import Flask, render_template, jsonify, request, redirect, make_response, url_for
+import jwt
 from pymongo import MongoClient
-import pymongo
-
-from flask import Flask, render_template, jsonify, request
-from flask.json.provider import JSONProvider
-
+import datetime
 import json
 import sys
 
 
 app = Flask(__name__)
 
+#secret.json을 읽어 jwt 발급을 위한 시크릿 키 획득.
+#시크릿 키는 보안상 secret.json 파일에 따로 보관하며 .gitignore에 등록하여 퍼블릭 업로드 되지 않도록 관리한다.
+with open("secret.json","r") as f:
+    jsondata = json.load(f)
+    
+#jwt셋업
+app.config['SECRET_KEY'] = jsondata["secret-key"]
+
+#Mongodb 연결
 client = MongoClient('localhost', 27017)
-db = client.dbjungle
-
-
-#####################################################################################
-# 이 부분은 코드를 건드리지 말고 그냥 두세요. 코드를 이해하지 못해도 상관없는 부분입니다.
-#
-# ObjectId 타입으로 되어있는 _id 필드는 Flask 의 jsonify 호출시 문제가 된다.
-# 이를 처리하기 위해서 기본 JsonEncoder 가 아닌 custom encoder 를 사용한다.
-# Custom encoder 는 다른 부분은 모두 기본 encoder 에 동작을 위임하고 ObjectId 타입만 직접 처리한다.
-class CustomJSONEncoder(json.JSONEncoder):
-    def default(self, o):
-        if isinstance(o, ObjectId):
-            return str(o)
-        return json.JSONEncoder.default(self, o)
-
-
-class CustomJSONProvider(JSONProvider):
-    def dumps(self, obj, **kwargs):
-        return json.dumps(obj, **kwargs, cls=CustomJSONEncoder)
-
-    def loads(self, s, **kwargs):
-        return json.loads(s, **kwargs)
-
-
-# 위에 정의되 custom encoder 를 사용하게끔 설정한다.
-app.json = CustomJSONProvider(app)
-
-# 여기까지 이해 못해도 그냥 넘어갈 코드입니다.
-# #####################################################################################
-
+db = client.buttLvUp
 
 
 #####
@@ -51,146 +28,148 @@ app.json = CustomJSONProvider(app)
 
 # API #1: HTML 틀(template) 전달
 #         틀 안에 데이터를 채워 넣어야 하는데 이는 아래 이어지는 /api/list 를 통해 이루어집니다.
+
+def parse_chart_JSON_data_(data_str):
+    data_list = data_str.split(',')
+    days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
+    week_json = []
+    for day in days:
+        week_json.append({'day': day, 'height': int(data_list[days.index(day)])})
+    return week_json
+
+def load_data_from_JSON(file_path):
+    with open(file_path, 'r') as file:
+        data = json.load(file)
+        for item in data:
+            chart_data_str = item['chart_data']
+            item['chart_data'] = parse_chart_JSON_data_(chart_data_str)
+            item['number'] = str(item['number'])
+            item['image_number'] = str(item['image_number'])
+        
+        # "number" 값을 기준으로 데이터 정렬
+        data.sort(key=lambda x: int(x['number']))
+        
+        return data
+
+
 @app.route('/')
 def home():
-    return render_template('index.html')
+    jwt_token = request.cookies.get('Authorization')
+    #토큰 없는 경우 로그인 페이지로
+    if not jwt_token:
+        print("토큰없음")
+        # payload_guest = {'user_id' : 'guest', 'exp': datetime.datetime.now()}
+        # guest_token = jwt.encode(payload_guest, app.config['SECRET_KEY'], algorithm='HS256')
+        # goto_login = make_response(render_template('login.html'))
+        # goto_login.set_cookie("Authorization", guest_token)
+        # return goto_login
+        return render_template('login.html')
+    
+    #토큰 있으면 디코딩하여 user_id, 만료기간 확인
+    try:
+        decoded_token = jwt.decode(jwt_token, app.config['SECRET_KEY'], algorithms=['HS256'])
+    except:
+        return render_template('login.html')
+    user_id = decoded_token.get('user_id')
+    exptime = decoded_token.get('exp')
+    exptime = datetime.datetime.fromtimestamp(exptime)
+    print(exptime)
+    print(datetime.datetime.now())
+    print(user_id)
 
+    #토큰이 유효기간내인지 확인해서 만료면 로그인 페이지로
+    if datetime.datetime.now() > exptime:
+        print("기간만료")
+        return render_template('login.html')
+    
+    #user_id를 유저풀의 ID와 대조하여 이름 등 정보 획득, 메인으로 보낸다
+    current_user = db.users.find_one({'ID' : user_id})
+    if current_user == None:
+        print("id 없음")
+        return render_template('login.html')
+    
+    # name = current_user["Name"]
 
-# API #2: 휴지통에 버려지지 않은 영화 목록을 반환합니다.
-@app.route('/api/list', methods=['GET'])
-def show_movies():
-    # client 에서 요청한 정렬 방식이 있는지를 확인합니다. 없다면 기본으로 좋아요 순으로 정렬합니다.
-    sortMode = request.args.get('sortMode', 'likes')
-
-    # 1. db에서 trashed 가 False인 movies 목록을 검색합니다. 주어진 정렬 방식으로 정렬합니다.
-    # 참고) find({},{}), sort()를 활용하면 됨.
-    #      개봉일 순서 정렬처럼 여러 기준으로 순서대로 정렬해야되는 경우 sort([('A', 1), ('B', 1)]) 처럼 줄 수 있음.
-    #    TODO: 다음 코드에서 likes로 정렬이 정상동작하도록 직접 수정해보세요!!!
-    if sortMode == 'likes':
-        movies = list(db.movies.find({'trashed': False}).sort('likes', pymongo.DESCENDING))
-    elif sortMode == 'viewers':
-        # 1. db에서 trashed 가 False인 movies 목록을 검색합니다.
-        movies = list(db.movies.find({'trashed': False}))
-        # 2. viewers를 숫자로 변환합니다.
-        for movie in movies:
-            if(movie['viewers']=="미 집계"):
-                movie['viewers'] = 0
-            else:
-                movie['viewers'] = int(movie['viewers'].replace(",","").replace("명",""))
-        # 3. viewers로 정렬합니다.
-        movies = sorted(movies, key=lambda movie: movie['viewers'], reverse=True)
-        # 4. viewers를 다시 문자열로 변환합니다.
-        for movie in movies:
-            movie['viewers'] = format(movie['viewers'], ',')+"명"
-    elif sortMode == 'date':
-        movies = list(db.movies.find({'trashed': False}).sort([('open_year', -1), ('open_month', -1), ('open_day', -1)]))
+    ## 로그인 정보를 바탕으로 메인 페이지를 렌더링
+    target_name = current_user["Name"]
+    ## TODO: json 파일 경로에서
+    black_box_items = load_data_from_JSON('test.json')
+    target_item = None
+    for item in black_box_items:
+        if item['name'] == target_name:
+            target_item = item
+            break
+    if target_item:
+        name = target_item['name']
+        time = target_item['total_time']
+        chart_data = target_item['chart_data']
+        image_number = target_item['image_number']
+        chart_box2_data = target_item['chart_data']
     else:
+        name = target_name
+        time = "00:00:00"
+        chart_data = []
+        image_number = "default.png"
+        chart_box2_data = []
+    chart_box2_data_json = json.dumps(chart_box2_data)
+
+
+    return render_template('main.html', name = name, time=time, black_box_items=black_box_items, image_number=image_number, chart_box2_data_json=chart_box2_data_json)
+    
+
+@app.route('/login', methods = ['POST'])
+def login():
+    #클라이언트로 받은 json 내용 중 user_id와 user_password 추출
+    user_id = request.get_json()['user_id']
+    user_password = request.get_json()['user_password']
+    print(user_id + user_password)
+
+    #클라이언트 db의 유저 목록에서 user_id 조회
+    user = db.users.find_one({'ID': user_id})
+    print(user['Password'])
+    if user == None:
         return jsonify({'result': 'failure'})
+    if user['ID'] == user_id and user['Password'] == user_password:
+        payload = {'user_id' : user_id, 'exp': datetime.datetime.now() + datetime.timedelta(minutes=1) - datetime.timedelta(hours=9)}
+        access_token = jwt.encode(payload, app.config['SECRET_KEY'], algorithm='HS256')
+        print(access_token)
+        response = jsonify({'result': 'success', 'access_token': access_token})
+        print(response)
+        return {'result': 'success', 'access_token': access_token}
+    
+    return jsonify({'result': 'failure'})
+    
 
-    # 2. 성공하면 success 메시지와 함께 movies_list 목록을 클라이언트에 전달합니다.
-    return jsonify({'result': 'success', 'movies_list': movies})
+@app.route("/signup", methods=['POST'])
+def handle_signup():
+    # 클라이언트로부터 받은 데이터를 JSON 형태로 추출
+    data = request.get_json()
+    full_name = data.get('full_name')
+    user_id = data.get('user_id')
+    user_password = data.get('user_password')
 
+    # 유저 정보 유효성 검사 및 DB에 저장하는 로직 구현 (예시 코드)
+    # 예를 들어, user_id가 이미 존재하는지 확인
+    if db.users.find_one({'ID': user_id}):
+        # 이미 존재하는 user_id인 경우
+        return jsonify({'result': 'failure', 'message': 'User ID already exists'}), 400
 
-# API #3: 휴지통에 버려진 영화 목록을 반환합니다.
-@app.route('/api/list/trash', methods=['GET'])
-def show_trashed_movies():
-    # client 에서 요청한 정렬 방식이 있는지를 확인합니다. 없다면 기본으로 좋아요 순으로 정렬합니다.
-    sortMode = request.args.get('sortMode', 'likes')
+    # 비밀번호 해싱 등 보안 처리 구현 필요
+    hashed_password = user_password  # hash_password는 가상의 비밀번호 해싱 함수
 
-    if sortMode == 'likes':
-        movies = list(db.movies.find({'trashed': True}).sort('likes', pymongo.DESCENDING))
-    elif sortMode == 'viewers':
-        # 1. db에서 trashed 가 False인 movies 목록을 검색합니다.
-        movies = list(db.movies.find({'trashed': True}))
-        # 2. viewers를 숫자로 변환합니다.
-        for movie in movies:
-            if(movie['viewers']=="미 집계"):
-                movie['viewers'] = 0
-            else:
-                movie['viewers'] = int(movie['viewers'].replace(",","").replace("명",""))
-        # 3. viewers로 정렬합니다.
-        movies = sorted(movies, key=lambda movie: movie['viewers'], reverse=True)
-        # 4. viewers를 다시 문자열로 변환합니다.
-        for movie in movies:
-            movie['viewers'] = format(movie['viewers'], ',')+"명"
-    elif sortMode == 'date':
-        movies = list(db.movies.find({'trashed': True}).sort([('open_year', -1), ('open_month', -1), ('open_day', -1)]))
-    else:
-        return jsonify({'result': 'failure'})
+    # 새 사용자 정보 MongoDB에 저장
+    db.users.insert_one({
+        'ID': user_id,
+        'Name': full_name,
+        'Password': hashed_password
+    })
 
-    # 2. 성공하면 success 메시지와 함께 movies_list 목록을 클라이언트에 전달합니다.
-    return jsonify({'result': 'success', 'movies_list': movies})
+    # 회원가입 성공 응답 반환
+    return jsonify({'result': 'success', 'message': 'User registered successfully'}), 200
 
-
-# API #4: 영화를 휴지통에 버립니다.
-@app.route('/api/trash', methods=['POST'])
-def trash_movie():
-    # 1. client 로부터 영화 title 를 받아옵니다.
-    movie_title = request.form['title_give']
-
-    # 2. title 를 이용해 해당 영화의 trashed 를 True 로 변경합니다.
-    #    참고: '$set' 활용하기!
-    db.movies.update_one({'title': movie_title}, {'$set': {'trashed': True}})
-
-    if db.movies.find_one({'title': movie_title})['trashed'] == True:
-        return jsonify({'result': 'success'})
-    else:
-        return jsonify({'result': 'failure'})
-
-# API #5: 버린 영화를 되돌립니다.
-@app.route('/api/trash/restore', methods=['POST'])
-def restore_movie():
-    # 1. client 로부터 영화 title 를 받아옵니다.
-    movie_title = request.form['title_give']
-
-    # 2. title 를 이용해 해당 영화의 trashed 를 False 로 변경합니다.
-    #    참고: '$set' 활용하기!
-    db.movies.update_one({'title': movie_title}, {'$set': {'trashed': False}})
-
-    if db.movies.find_one({'title': movie_title})['trashed'] == False:
-        return jsonify({'result': 'success'})
-    else:
-        return jsonify({'result': 'failure'})
-
-# API #6: 휴지통의 영화를 완전히 삭제합니다.
-@app.route('/api/trash/delete', methods=['POST'])
-def delete_movie():
-    # 1. client 로부터 영화 title 를 받아옵니다.
-    movie_title = request.form['title_give']
-
-    # 2. title 를 이용해 해당 영화의 trashed 를 False 로 변경합니다.
-    #    참고: '$set' 활용하기!
-    result = db.movies.delete_one({'title': movie_title})
-    if result.deleted_count == 1:
-        return jsonify({'result': 'success'})
-    else:
-        return jsonify({'result': 'failure'})
-
-# API #3: 영화에 좋아요 숫자를 하나 올립니다.
-@app.route('/api/like', methods=['POST'])
-def like_movie():
-    # 1. movies 목록에서 find_one으로 영화 하나를 찾습니다.
-    #    TODO: 영화 하나만 찾도록 다음 코드를 직접 수정해보세요!!!
-    title_receive = request.form['title_give']
-    movie = db.movies.find_one({'title': title_receive})
-
-    # 2. movie의 like 에 1을 더해준 new_like 변수를 만듭니다.
-    new_likes = movie['likes'] + 1
-
-    # 3. movies 목록에서 id 가 매칭되는 영화의 like 를 new_like로 변경합니다.
-    #    참고: '$set' 활용하기!
-    #    TODO: 영화 하나의 likes값이 변경되도록 다음 코드를 직접 수정해보세요!!!
-    result = db.movies.update_one({'title': title_receive}, {'$set': {'likes': new_likes}})
-
-    # 4. 하나의 영화만 영향을 받아야 하므로 result.updated_count 가 1이면  result = success 를 보냄
-    if result.modified_count == 1:
-        return jsonify({'result': 'success'})
-    else:
-        return jsonify({'result': 'failure'})
-
-# # API 구글 시트의 정보를 가져옵니다.
-# @app.route('/api/sheet', methods=['GET'])
-# def get_sheet():
+@app.route("/signup", methods=['GET'])
+def signup_page():
+    return render_template("signup.html")
 
 
 

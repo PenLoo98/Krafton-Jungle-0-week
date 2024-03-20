@@ -31,7 +31,7 @@ def load_data_from_file(file_path):
 
 @app.route('/')
 def index():
-    target_name = "mac"
+    target_name = "Jae woo"
     black_box_items = load_data_from_file('/Users/sfumato/0W/data.txt')
     target_item = None
     for item in black_box_items:
@@ -43,29 +43,17 @@ def index():
         time = target_item['total_time']
         chart_data = target_item['chart_data']
         image_number = target_item['image_number']
+        chart_box2_data = [{'height': data['height'], 'day': data['day']} for data in chart_data]
     else:
         name = target_name
         time = "00:00:00"
         chart_data = []
         image_number = "default.png"
-
-    # chart-box2에 표시할 데이터
-    chart_box2_data = [
-        {'height': 10, 'day': 'Mon'},
-        {'height': 20, 'day': 'Tue'},
-        {'height': 30, 'day': 'Wed'},
-        {'height': 40, 'day': 'Thu'},
-        {'height': 50, 'day': 'Fri'},
-        {'height': 60, 'day': 'Sat'}
-    ]
-
-    # chart-box에 표시할 데이터 (빈 리스트)
-    chart_box_data = []
+        chart_box2_data = []
 
     chart_data_json = json.dumps(chart_data)
     chart_box2_data_json = json.dumps(chart_box2_data)
-    chart_box_data_json = json.dumps(chart_box_data)
-    return render_template('index.html', name=name, time=time, black_box_items=black_box_items, chart_data_json=chart_data_json, image_number=image_number, chart_box2_data_json=chart_box2_data_json, chart_box_data_json=chart_box_data_json)
+    return render_template('index.html', name=name, time=time, black_box_items=black_box_items, chart_data_json=chart_data_json, image_number=image_number, chart_box2_data_json=chart_box2_data_json)
 
 if __name__ == '__main__':
     app.run(debug=True)

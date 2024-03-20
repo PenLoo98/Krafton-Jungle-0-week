@@ -1,0 +1,8 @@
+// 폴더 예외 처리
+!StudyTimeJSON/
+StudyTimeJSON/*
+!StudyTimeJSON/Study Time.json
+
+// 파일 예외 처리
+privateData_local.json
+privateData.json

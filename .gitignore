@@ -3,6 +3,11 @@
 StudyTimeJSON/*
 !StudyTimeJSON/Study Time.json
 
+// 
+!Get_from_Sheet
+Get_from_Sheet/*
+!Get_from_Sheet/getSheetData.py
+
 // 파일 예외 처리
 privateData_local.json
 privateData.json

@@ -9,7 +9,7 @@ db = client.buttLvUp
 #StudyTime.json을 몽고db의 studylog 콜렉션에 덤프(매일 지우고 다시 쓴다.)
 def logDump():
     db.studylog.drop()
-    with open("Save to DB/Study Time.json","r") as f:
+    with open("Study Time.json","r") as f:
         jsondata = json.load(f)
     db.studylog.insert_many(jsondata)
 

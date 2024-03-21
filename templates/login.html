@@ -164,9 +164,6 @@
         
     </style>
 
-    <!-- 이 HTML 안에서 사용할 javascript 를 정의합니다. -->
-    <script src="{{ url_for('static', filename='script.js') }}"></script>
-
 </head>
 
 
@@ -180,7 +177,7 @@
         <input type="text" name="user_id" id="user_id" placeholder="Username">
         <input type="password" name="user_password" id="user_password" placeholder="Password">
         <div class="form-check"></div>
-        <button id="user_return" type="submit" class="btn btn-primary" onclick="login()">Login</button>
+        <button id="user_return" type="submit" class="btn btn-primary">Login</button>
     </div>
     <div class="signup-link">
         Don't have an account? <a href="/signup">Register</a>

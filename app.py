@@ -130,7 +130,8 @@ def login():
     if user == None:
         return jsonify({'result': 'failure'})
     if user['ID'] == user_id and user['Password'] == user_password:
-        payload = {'user_id' : user_id, 'exp': datetime.datetime.now() + datetime.timedelta(minutes=1) - datetime.timedelta(hours=9)}
+        # FIXME:로컬 환경이랑 서버 컴퓨터 환경에 따라 jwt.encode의 결과가 다르게 나올 수 있음
+        payload = {'user_id' : user_id, 'exp': datetime.datetime.now() + datetime.timedelta(minutes=30)}
         access_token = jwt.encode(payload, app.config['SECRET_KEY'], algorithm='HS256')
         print(access_token)
         response = jsonify({'result': 'success', 'access_token': access_token})

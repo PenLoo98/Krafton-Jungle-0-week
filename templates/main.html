@@ -143,11 +143,12 @@
 }
 
 .chart-container {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    margin-bottom: 150px;
-  }
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 150px;
+}
 
 /* 상단 차트 박스 */
   .chart-box2 {
@@ -197,6 +198,28 @@
     font-weight: bold;
     z-index: 1;
   }
+
+  /* 로그아웃 버튼*/
+.logout-button {
+  position: absolute;
+  top: 590px;
+  left: 5px;
+  transform: translateY(-50%);
+  padding: 10px 20px;
+  background-color: #FF5F5F;
+  color: #FFFFFF;
+  border: none;
+  border-radius: 5px;
+  font-size: 16px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+  z-index: 100;
+}
+  .logout-button:hover {
+    background-color: #FF4444;
+  }
+
 </style>
 
 </head>
@@ -214,6 +237,8 @@
         <img src="{{ url_for('static', filename=image_number+'.png') }}" alt="Main image">
       </div>
     
+      <button class="logout-button">Logout</button>
+
       <div class="chart-box2-container">
         <div class="time-text">{{ time }}<br>In Jung/e</div>
         <div class="chart-box2" id="chart-box2" style="display: flex;" data-chart-data="{{ chart_box2_data_json }}"></div>

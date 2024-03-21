@@ -9,7 +9,7 @@ db = client.buttLvUp
 #StudyTime.json을 몽고db의 studylog 콜렉션에 덤프(매일 지우고 다시 쓴다.)
 def logDump():
     db.studylog.drop()
-    with open("Save to DB/Study Time.json","r") as f:
+    with open("Study Time.json","r") as f:
         jsondata = json.load(f)
     db.studylog.insert_many(jsondata)
 
@@ -18,14 +18,14 @@ def logDump():
 #dateweek 콜렉션 생성
 def dateweekColl():
     db.dateweek.drop()
-    with open("Save to DB/date_week.json","r") as f:
+    with open("date_week.json","r") as f:
         jsondata = json.load(f)
     db.dateweek.insert_many(jsondata)
 
 #greatdata 콜렉션 초기화
 def makeGreatdata():
     db.greatdata.drop
-    with open("Save to DB/greatdata.json","r") as f:
+    with open("greatdata.json","r") as f:
         jsondata = json.load(f)
     db.greatdata.insert_many(jsondata)
 

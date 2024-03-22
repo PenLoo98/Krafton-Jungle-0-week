@@ -59,7 +59,8 @@
                     },
                     error: function(xhr, status, error) {
                         // 로그인 실패 시 오류 처리, 예를 들어 오류 메시지 표시
-                        alert("Login failed: " + error);
+                        var errorMessage = xhr.responseJSON.error
+                        alert("Login failed\n" + errorMessage);
                     }
                 });
             });
@@ -163,6 +164,9 @@
 
         
     </style>
+
+    <!-- 이 HTML 안에서 사용할 javascript 를 정의합니다. -->
+    <script src="{{ url_for('static', filename='script.js') }}"></script>
 
 </head>
 

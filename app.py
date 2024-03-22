@@ -4,7 +4,8 @@ from pymongo import MongoClient
 import datetime
 import json
 import sys
-
+import random
+from extractjson import greatjson
 
 app = Flask(__name__)
 
@@ -17,7 +18,7 @@ with open("secret.json","r") as f:
 app.config['SECRET_KEY'] = jsondata["secret-key"]
 
 #Mongodb 연결
-client = MongoClient('localhost', 27017)
+client = MongoClient(jsondata["dburl"],27017)
 db = client.buttLvUp
 
 
@@ -37,21 +38,6 @@ def parse_chart_JSON_data_(data_str):
         week_json.append({'day': day, 'height': int(data_list[days.index(day)])})
     return week_json
 
-def load_data_from_JSON(file_path):
-    with open(file_path, 'r') as file:
-        data = json.load(file)
-        for item in data:
-            chart_data_str = item['chart_data']
-            item['chart_data'] = parse_chart_JSON_data_(chart_data_str)
-            item['number'] = str(item['number'])
-            item['image_number'] = str(item['image_number'])
-        
-        # "number" 값을 기준으로 데이터 정렬
-        data.sort(key=lambda x: int(x['number']))
-        
-        return data
-
-
 @app.route('/')
 def home():
     jwt_token = request.cookies.get('Authorization')
@@ -69,10 +55,12 @@ def home():
     try:
         decoded_token = jwt.decode(jwt_token, app.config['SECRET_KEY'], algorithms=['HS256'])
     except:
+        print("토큰만료")
         return render_template('login.html')
     user_id = decoded_token.get('user_id')
     exptime = decoded_token.get('exp')
     exptime = datetime.datetime.fromtimestamp(exptime)
+
     print(exptime)
     print(datetime.datetime.now())
     print(user_id)
@@ -92,8 +80,18 @@ def home():
 
     ## 로그인 정보를 바탕으로 메인 페이지를 렌더링
     target_name = current_user["Name"]
-    ## TODO: json 파일 경로에서
-    black_box_items = load_data_from_JSON('test.json')
+
+    # greatjson으로 받은 json 객체를 다시한번 편집, black_box_items = gdata 객체에 저장해서 사용한다
+    gdata = greatjson()
+    for item in gdata:
+        chart_data_str = item['chart_data']
+        item['chart_data'] = parse_chart_JSON_data_(chart_data_str)
+        item['number'] = str(item['number'])
+        item['image_number'] = str(item['image_number'])
+    # "number" 값을 기준으로 데이터 정렬
+    gdata.sort(key=lambda x: int(x['number']))
+    black_box_items = gdata
+
     target_item = None
     for item in black_box_items:
         if item['name'] == target_name:
@@ -126,19 +124,17 @@ def login():
 
     #클라이언트 db의 유저 목록에서 user_id 조회
     user = db.users.find_one({'ID': user_id})
-    print(user['Password'])
-    if user == None:
-        return jsonify({'result': 'failure'})
+    if user is None:
+        return jsonify({'error': '아이디 또는 비밀번호를 다시 확인해주세요'}), 400
     if user['ID'] == user_id and user['Password'] == user_password:
-        # FIXME:로컬 환경이랑 서버 컴퓨터 환경에 따라 jwt.encode의 결과가 다르게 나올 수 있음
-        payload = {'user_id' : user_id, 'exp': datetime.datetime.now() + datetime.timedelta(minutes=30)}
+        payload = {'user_id' : user_id, 'exp': datetime.datetime.now() + datetime.timedelta(minutes=60)}
         access_token = jwt.encode(payload, app.config['SECRET_KEY'], algorithm='HS256')
         print(access_token)
         response = jsonify({'result': 'success', 'access_token': access_token})
         print(response)
         return {'result': 'success', 'access_token': access_token}
     
-    return jsonify({'result': 'failure'})
+    return jsonify({'error': '아이디 또는 비밀번호를 다시 확인해주세요'}), 400
     
 
 @app.route("/signup", methods=['POST'])
@@ -151,9 +147,13 @@ def handle_signup():
 
     # 유저 정보 유효성 검사 및 DB에 저장하는 로직 구현 (예시 코드)
     # 예를 들어, user_id가 이미 존재하는지 확인
+    if db.greatdata.find_one({'Name': full_name}) is None:
+        # 출석부에 없는 이름이면
+        return jsonify({'error': '출석부에 없는 이름 입니다.\n출석부상 이름(예:김현수(남))으로 입력해주세요'}), 404
+    
     if db.users.find_one({'ID': user_id}):
         # 이미 존재하는 user_id인 경우
-        return jsonify({'result': 'failure', 'message': 'User ID already exists'}), 400
+        return jsonify({'error': 'User ID already exists'}), 400
 
     # 비밀번호 해싱 등 보안 처리 구현 필요
     hashed_password = user_password  # hash_password는 가상의 비밀번호 해싱 함수
@@ -172,7 +172,35 @@ def handle_signup():
 def signup_page():
     return render_template("signup.html")
 
-
+@app.route("/gacha", methods=['POST'])
+def gacha():
+        # 클라이언트로부터 받은 데이터를 JSON 형태로 추출
+    jwt_token = request.cookies.get('Authorization')
+    #토큰 없는 경우 로그인 페이지로
+    if not jwt_token:
+        print("토큰없음")
+        # payload_guest = {'user_id' : 'guest', 'exp': datetime.datetime.now()}
+        # guest_token = jwt.encode(payload_guest, app.config['SECRET_KEY'], algorithm='HS256')
+        # goto_login = make_response(render_template('login.html'))
+        # goto_login.set_cookie("Authorization", guest_token)
+        # return goto_login
+        return render_template('login.html')
+    
+    #토큰 있으면 디코딩하여 user_id, 만료기간 확인
+    try:
+        decoded_token = jwt.decode(jwt_token, app.config['SECRET_KEY'], algorithms=['HS256'])
+    except:
+        print("토큰만료")
+        return render_template('login.html')
+    user_id = decoded_token.get('user_id')
+    user_name = db.users.find_one({'ID' : user_id})["Name"]
+    random_number = random.randint(1,15)
+    try:
+        db.greatdata.update_one({"Name": user_name}, {"$set": {"Img": random_number}})
+    except:
+        return jsonify({'error': '가챠 오류'}), 500
+    return jsonify({'result': 'success', 'message': 'gacha!'}), 200
+    
 
 if __name__ == '__main__':
     print(sys.executable)

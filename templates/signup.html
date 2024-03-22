@@ -59,7 +59,8 @@
                   },
                   error: function(xhr, status, error) {
                       // 회원가입 실패 시 오류 처리, 예를 들어 오류 메시지 표시
-                      alert("Signup failed: " + error);
+                      var errorMessage = xhr.responseJSON.error
+                      alert("Signup failed\n" + errorMessage);
                   }
               });
           });

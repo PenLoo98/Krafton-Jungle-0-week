@@ -4,5 +4,6 @@ getFromSheet/StudyTimeJSON/
 
 // 파일 예외 처리
 secret.json
+.DS_Store
 setDB/dbinfo.json
 getFromSheet/*.json

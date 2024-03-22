@@ -1,18 +1,8 @@
 // 폴더 예외 처리
-!StudyTimeJSON/
-StudyTimeJSON/*
-!StudyTimeJSON/Study Time.json
+getFromSheet/StudyTimeJSON/
 
-// 
-!Get_from_Sheet
-Get_from_Sheet/*
-!Get_from_Sheet/getSheetData.py
 
 // 파일 예외 처리
-privateData_local.json
-privateData.json
-*/secret.json
 secret.json
-*/crafton-jungle-8bcf9c56ce66.json
-*/privateData.json
-*/privateData_local.json
+setDB/dbinfo.json
+getFromSheet/*.json

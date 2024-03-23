@@ -58,10 +58,20 @@ def parsetime(time_str):
     hh = 0
     mm = 0
     ss = 0
+
+    def intify(time_value):
+        out = 0
+        try:
+           out = int(time_value)
+        except:
+           out = int(time_value.split(".")[0])
+        return out
+
+    time_list = time_str.split(':')
     try:
-        hh, mm, ss = map(int, time_str.split(':'))
+        hh, mm, ss = map(intify, time_str.split(':'))
     except ValueError as e:
-        hh, mm = map(int, time_str.split(':'))
+        hh, mm = map(intify, time_str.split(':'))
         if hh<6:
             hh +=24
     delta = int(timedelta(hours=hh, minutes=mm, seconds=ss).total_seconds())
